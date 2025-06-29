@@ -1,17 +1,22 @@
+// Jenkinsfile (à la racine du dépôt)
 pipeline {
-  agent any
+  /* 1️⃣  Tout le pipeline tourne à l’intérieur d’un conteneur python:3.10-slim
+        Le socket Docker du host étant monté, on peut quand même builder nos images ensuite. */
+  agent {
+    docker {
+      image 'python:3.10-slim'
+      args  '-v /var/run/docker.sock:/var/run/docker.sock'
+    }
+  }
 
   stages {
-    stage('Checkout') {
-      steps {
-        checkout scm
-      }
-    }
-
     stage('Tests') {
       steps {
-        sh 'pip install -r art-explorer/requirements.txt'
-        sh 'pytest -q'
+        sh '''
+          pip install --no-cache-dir -r art-explorer/requirements.txt pytest
+          cd art-explorer
+          pytest -q
+        '''
       }
     }
 
@@ -25,14 +30,5 @@ pipeline {
     }
   }
 
-  post {
-    always {
-      junit '**/tests/*.xml'   // si tu ajoutes --junit-xml à pytest plus tard
-    }
-    failure {
-      mail to: 'ton.mail@exemple.com',
-           subject: "❌ Build #${env.BUILD_NUMBER} FAILED",
-           body: "Consulte Jenkins pour le log."
-    }
-  }
+  /* 2️⃣  On retire JUnit et Mail pour l’instant (tu pourras les remettre plus tard). */
 }
